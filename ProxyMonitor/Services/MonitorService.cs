@@ -3,6 +3,8 @@ using System;
 using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace ProxyMonitor.Services
 {
@@ -103,10 +105,24 @@ namespace ProxyMonitor.Services
 
                 if (_configService.CurrentConfig.UseAudioFile && !string.IsNullOrEmpty(audioFilePath) && System.IO.File.Exists(audioFilePath))
                 {
-                    // Play audio file
-                    using (System.Media.SoundPlayer player = new System.Media.SoundPlayer(audioFilePath))
+                    // Play audio file with volume control
+                    float audioVolume = isEnabled ? _configService.CurrentConfig.AudioEnabledVolume : _configService.CurrentConfig.AudioDisabledVolume;
+                    audioVolume = audioVolume / 100.0f;
+
+                    using (var audioFile = new AudioFileReader(audioFilePath))
                     {
-                        player.PlaySync();
+                        var volumeSampleProvider = new VolumeSampleProvider(audioFile) { Volume = audioVolume };
+                        using (var outputDevice = new WaveOutEvent())
+                        {
+                            outputDevice.Init(volumeSampleProvider);
+                            outputDevice.Play();
+
+                            // 等待播放完成
+                            while (outputDevice.PlaybackState == PlaybackState.Playing)
+                            {
+                                Thread.Sleep(100);
+                            }
+                        }
                     }
                 }
                 else

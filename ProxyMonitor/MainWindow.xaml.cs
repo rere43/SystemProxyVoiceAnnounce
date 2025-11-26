@@ -10,6 +10,8 @@ using System.Windows.Data;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Windows.Media;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace ProxyMonitor
 {
@@ -63,6 +65,8 @@ namespace ProxyMonitor
             TxtAudioDisabled.Text = _configService.CurrentConfig.AudioFileDisabled ?? string.Empty;
             SldVolume.Value = _configService.CurrentConfig.Volume;
             SldRate.Value = _configService.CurrentConfig.Rate;
+            SldAudioEnabledVolume.Value = _configService.CurrentConfig.AudioEnabledVolume;
+            SldAudioDisabledVolume.Value = _configService.CurrentConfig.AudioDisabledVolume;
             ChkStartup.IsChecked = _configService.CurrentConfig.RunOnStartup;
             ChkUseAudioFile.IsChecked = _configService.CurrentConfig.UseAudioFile;
 
@@ -163,6 +167,82 @@ namespace ProxyMonitor
             }
         }
 
+        private void BtnTestAudioEnabled_Click(object sender, RoutedEventArgs e)
+        {
+            string audioFilePath = TxtAudioEnabled.Text;
+            if (string.IsNullOrWhiteSpace(audioFilePath) || !System.IO.File.Exists(audioFilePath))
+            {
+                MessageBox.Show("请选择有效的音频文件", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            float volume = (float)SldAudioEnabledVolume.Value / 100.0f;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    using (var audioFile = new AudioFileReader(audioFilePath))
+                    {
+                        var volumeSampleProvider = new VolumeSampleProvider(audioFile) { Volume = volume };
+                        using (var outputDevice = new WaveOutEvent())
+                        {
+                            outputDevice.Init(volumeSampleProvider);
+                            outputDevice.Play();
+
+                            // 等待播放完成
+                            while (outputDevice.PlaybackState == PlaybackState.Playing)
+                            {
+                                System.Threading.Thread.Sleep(100);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() => MessageBox.Show($"试听失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error));
+                }
+            });
+        }
+
+        private void BtnTestAudioDisabled_Click(object sender, RoutedEventArgs e)
+        {
+            string audioFilePath = TxtAudioDisabled.Text;
+            if (string.IsNullOrWhiteSpace(audioFilePath) || !System.IO.File.Exists(audioFilePath))
+            {
+                MessageBox.Show("请选择有效的音频文件", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            float volume = (float)SldAudioDisabledVolume.Value / 100.0f;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    using (var audioFile = new AudioFileReader(audioFilePath))
+                    {
+                        var volumeSampleProvider = new VolumeSampleProvider(audioFile) { Volume = volume };
+                        using (var outputDevice = new WaveOutEvent())
+                        {
+                            outputDevice.Init(volumeSampleProvider);
+                            outputDevice.Play();
+
+                            // 等待播放完成
+                            while (outputDevice.PlaybackState == PlaybackState.Playing)
+                            {
+                                System.Threading.Thread.Sleep(100);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() => MessageBox.Show($"试听失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error));
+                }
+            });
+        }
+
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
             // Update Config
@@ -172,6 +252,8 @@ namespace ProxyMonitor
             _configService.CurrentConfig.AudioFileDisabled = string.IsNullOrWhiteSpace(TxtAudioDisabled.Text) ? null : TxtAudioDisabled.Text;
             _configService.CurrentConfig.Volume = (int)SldVolume.Value;
             _configService.CurrentConfig.Rate = (int)SldRate.Value;
+            _configService.CurrentConfig.AudioEnabledVolume = (int)SldAudioEnabledVolume.Value;
+            _configService.CurrentConfig.AudioDisabledVolume = (int)SldAudioDisabledVolume.Value;
             _configService.CurrentConfig.VoiceName = CmbVoices.SelectedValue as string;
             _configService.CurrentConfig.UseAudioFile = ChkUseAudioFile.IsChecked == true;
             _configService.CurrentConfig.RunOnStartup = ChkStartup.IsChecked == true;
@@ -240,11 +322,16 @@ namespace ProxyMonitor
                 LblContentDisabled.Visibility = Visibility.Collapsed;
                 TxtContentDisabled.Visibility = Visibility.Collapsed;
 
-                // Show audio file selectors
+                // Show audio file selectors and controls
                 LblAudioEnabled.Visibility = Visibility.Visible;
                 GridAudioEnabled.Visibility = Visibility.Visible;
+                GridAudioEnabledControls.Visibility = Visibility.Visible;
                 LblAudioDisabled.Visibility = Visibility.Visible;
                 GridAudioDisabled.Visibility = Visibility.Visible;
+                GridAudioDisabledControls.Visibility = Visibility.Visible;
+
+                // Hide TTS settings
+                BorderVoiceSettings.Visibility = Visibility.Collapsed;
             }
             else
             {
@@ -254,11 +341,16 @@ namespace ProxyMonitor
                 LblContentDisabled.Visibility = Visibility.Visible;
                 TxtContentDisabled.Visibility = Visibility.Visible;
 
-                // Hide audio file selectors
+                // Hide audio file selectors and controls
                 LblAudioEnabled.Visibility = Visibility.Collapsed;
                 GridAudioEnabled.Visibility = Visibility.Collapsed;
+                GridAudioEnabledControls.Visibility = Visibility.Collapsed;
                 LblAudioDisabled.Visibility = Visibility.Collapsed;
                 GridAudioDisabled.Visibility = Visibility.Collapsed;
+                GridAudioDisabledControls.Visibility = Visibility.Collapsed;
+
+                // Show TTS settings
+                BorderVoiceSettings.Visibility = Visibility.Visible;
             }
         }
 
