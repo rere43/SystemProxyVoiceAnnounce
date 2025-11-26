@@ -11,6 +11,8 @@ namespace ProxyMonitor.Services
         public int Volume { get; set; } = 100;
         public int Rate { get; set; } = 0;
         public string? VoiceName { get; set; }
+        public string? AudioFileEnabled { get; set; }
+        public string? AudioFileDisabled { get; set; }
         public bool RunOnStartup { get; set; } = false;
     }
 

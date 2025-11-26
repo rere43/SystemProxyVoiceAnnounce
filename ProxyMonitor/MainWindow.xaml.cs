@@ -59,6 +59,8 @@ namespace ProxyMonitor
         {
             TxtContent.Text = _configService.CurrentConfig.TtsText;
             TxtContentDisabled.Text = _configService.CurrentConfig.TtsTextDisabled;
+            TxtAudioEnabled.Text = _configService.CurrentConfig.AudioFileEnabled ?? string.Empty;
+            TxtAudioDisabled.Text = _configService.CurrentConfig.AudioFileDisabled ?? string.Empty;
             SldVolume.Value = _configService.CurrentConfig.Volume;
             SldRate.Value = _configService.CurrentConfig.Rate;
             ChkStartup.IsChecked = _configService.CurrentConfig.RunOnStartup;
@@ -68,15 +70,15 @@ namespace ProxyMonitor
             {
                 var voices = synth.GetInstalledVoices()
                     .Where(v => v.Enabled)
-                    .Select(v => new VoiceItem
-                    {
-                        Id = v.VoiceInfo.Name,
-                        DisplayName = $"{v.VoiceInfo.Name} ({v.VoiceInfo.Culture.Name})"
+                    .Select(v => new VoiceItem 
+                    { 
+                        Id = v.VoiceInfo.Name, 
+                        DisplayName = $"{v.VoiceInfo.Name} ({v.VoiceInfo.Culture.Name})" 
                     })
                     .ToList();
 
                 CmbVoices.ItemsSource = voices;
-
+                
                 if (!string.IsNullOrEmpty(_configService.CurrentConfig.VoiceName))
                 {
                     var selected = voices.FirstOrDefault(v => v.Id == _configService.CurrentConfig.VoiceName);
@@ -86,7 +88,7 @@ namespace ProxyMonitor
                     }
                     else if (voices.Count > 0)
                     {
-                        CmbVoices.SelectedIndex = 0;
+                         CmbVoices.SelectedIndex = 0;
                     }
                 }
                 else if (voices.Count > 0)
@@ -100,7 +102,7 @@ namespace ProxyMonitor
         {
             string text = TxtContent.Text;
             if (string.IsNullOrWhiteSpace(text)) text = "测试语音";
-
+            
             int volume = (int)SldVolume.Value;
             int rate = (int)SldRate.Value;
             string? voiceName = CmbVoices.SelectedValue as string;
@@ -114,7 +116,7 @@ namespace ProxyMonitor
                         synth.Volume = volume;
                         synth.Rate = rate;
 
-                        if (!string.IsNullOrEmpty(voiceName))
+                        if (! string.IsNullOrEmpty(voiceName))
                         {
                             synth.SelectVoice(voiceName);
                         }
@@ -129,11 +131,41 @@ namespace ProxyMonitor
             });
         }
 
+        private void BtnSelectAudioEnabled_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog dialog = new OpenFileDialog
+            {
+                Filter = "WAV音频文件 (*.wav)|*.wav",
+                Title = "选择开启语音音频文件"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                TxtAudioEnabled.Text = dialog.FileName;
+            }
+        }
+
+        private void BtnSelectAudioDisabled_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog dialog = new OpenFileDialog
+            {
+                Filter = "WAV音频文件 (*.wav)|*.wav",
+                Title = "选择关闭语音音频文件"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                TxtAudioDisabled.Text = dialog.FileName;
+            }
+        }
+
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
             // Update Config
             _configService.CurrentConfig.TtsText = TxtContent.Text;
             _configService.CurrentConfig.TtsTextDisabled = TxtContentDisabled.Text;
+            _configService.CurrentConfig.AudioFileEnabled = string.IsNullOrWhiteSpace(TxtAudioEnabled.Text) ? null : TxtAudioEnabled.Text;
+            _configService.CurrentConfig.AudioFileDisabled = string.IsNullOrWhiteSpace(TxtAudioDisabled.Text) ? null : TxtAudioDisabled.Text;
             _configService.CurrentConfig.Volume = (int)SldVolume.Value;
             _configService.CurrentConfig.Rate = (int)SldRate.Value;
             _configService.CurrentConfig.VoiceName = CmbVoices.SelectedValue as string;
@@ -145,7 +177,7 @@ namespace ProxyMonitor
 
             // Hide Window
             this.Hide();
-
+            
             // Ensure Monitor is running
             _monitorService.Start();
         }

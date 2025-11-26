@@ -98,33 +98,48 @@ namespace ProxyMonitor.Services
         {
             try
             {
-                using (SpeechSynthesizer synth = new SpeechSynthesizer())
+                // Check for audio file first
+                string? audioFilePath = isEnabled ? _configService.CurrentConfig.AudioFileEnabled : _configService.CurrentConfig.AudioFileDisabled;
+
+                if (!string.IsNullOrEmpty(audioFilePath) && System.IO.File.Exists(audioFilePath))
                 {
-                    synth.Volume = _configService.CurrentConfig.Volume;
-                    synth.Rate = _configService.CurrentConfig.Rate;
-
-                    if (!string.IsNullOrEmpty(_configService.CurrentConfig.VoiceName))
+                    // Play audio file
+                    using (System.Media.SoundPlayer player = new System.Media.SoundPlayer(audioFilePath))
                     {
-                        try
-                        {
-                            synth.SelectVoice(_configService.CurrentConfig.VoiceName);
-                        }
-                        catch
-                        {
-                            // Fallback to default if voice not found
-                        }
+                        player.PlaySync();
                     }
-
-                    string textToSpeak = isEnabled ? _configService.CurrentConfig.TtsText : _configService.CurrentConfig.TtsTextDisabled;
-                    if (!string.IsNullOrEmpty(textToSpeak))
+                }
+                else
+                {
+                    // Fallback to TTS
+                    using (SpeechSynthesizer synth = new SpeechSynthesizer())
                     {
-                        synth.Speak(textToSpeak);
+                        synth.Volume = _configService.CurrentConfig.Volume;
+                        synth.Rate = _configService.CurrentConfig.Rate;
+
+                        if (!string.IsNullOrEmpty(_configService.CurrentConfig.VoiceName))
+                        {
+                            try
+                            {
+                                synth.SelectVoice(_configService.CurrentConfig.VoiceName);
+                            }
+                            catch
+                            {
+                                // Fallback to default if voice not found
+                            }
+                        }
+
+                        string textToSpeak = isEnabled ? _configService.CurrentConfig.TtsText : _configService.CurrentConfig.TtsTextDisabled;
+                        if (!string.IsNullOrEmpty(textToSpeak))
+                        {
+                            synth.Speak(textToSpeak);
+                        }
                     }
                 }
             }
             catch
             {
-                // Ignore TTS errors
+                // Ignore errors
             }
         }
     }
