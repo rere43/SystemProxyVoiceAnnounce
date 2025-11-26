@@ -3,8 +3,9 @@
   "TtsTextDisabled": "\u7CFB\u7EDF\u4EE3\u7406\u5173\u95ED",
   "Volume": 60,
   "Rate": 0,
-  "VoiceName": "Microsoft Kangkang",
+  "VoiceName": "Microsoft Tracy",
   "AudioFileEnabled": "K:\\MyProject\\Chrome\u63D2\u4EF6 \u68C0\u6D4B\u4EE3\u7406 \u64AD\u653E\u8BED\u97F3\\ProxyMonitor\\\u5F00\u542F.wav",
   "AudioFileDisabled": "K:\\MyProject\\Chrome\u63D2\u4EF6 \u68C0\u6D4B\u4EE3\u7406 \u64AD\u653E\u8BED\u97F3\\ProxyMonitor\\\u5173\u95ED.wav",
+  "UseAudioFile": true,
   "RunOnStartup": true
 }

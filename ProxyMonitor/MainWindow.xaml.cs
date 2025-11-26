@@ -64,21 +64,25 @@ namespace ProxyMonitor
             SldVolume.Value = _configService.CurrentConfig.Volume;
             SldRate.Value = _configService.CurrentConfig.Rate;
             ChkStartup.IsChecked = _configService.CurrentConfig.RunOnStartup;
+            ChkUseAudioFile.IsChecked = _configService.CurrentConfig.UseAudioFile;
+
+            // Set initial visibility based on UseAudioFile
+            UpdateControlVisibility(_configService.CurrentConfig.UseAudioFile);
 
             // Load Voices with Language Info
             using (SpeechSynthesizer synth = new SpeechSynthesizer())
             {
                 var voices = synth.GetInstalledVoices()
                     .Where(v => v.Enabled)
-                    .Select(v => new VoiceItem 
-                    { 
-                        Id = v.VoiceInfo.Name, 
-                        DisplayName = $"{v.VoiceInfo.Name} ({v.VoiceInfo.Culture.Name})" 
+                    .Select(v => new VoiceItem
+                    {
+                        Id = v.VoiceInfo.Name,
+                        DisplayName = $"{v.VoiceInfo.Name} ({v.VoiceInfo.Culture.Name})"
                     })
                     .ToList();
 
                 CmbVoices.ItemsSource = voices;
-                
+
                 if (!string.IsNullOrEmpty(_configService.CurrentConfig.VoiceName))
                 {
                     var selected = voices.FirstOrDefault(v => v.Id == _configService.CurrentConfig.VoiceName);
@@ -88,7 +92,7 @@ namespace ProxyMonitor
                     }
                     else if (voices.Count > 0)
                     {
-                         CmbVoices.SelectedIndex = 0;
+                        CmbVoices.SelectedIndex = 0;
                     }
                 }
                 else if (voices.Count > 0)
@@ -102,7 +106,7 @@ namespace ProxyMonitor
         {
             string text = TxtContent.Text;
             if (string.IsNullOrWhiteSpace(text)) text = "测试语音";
-            
+
             int volume = (int)SldVolume.Value;
             int rate = (int)SldRate.Value;
             string? voiceName = CmbVoices.SelectedValue as string;
@@ -116,7 +120,7 @@ namespace ProxyMonitor
                         synth.Volume = volume;
                         synth.Rate = rate;
 
-                        if (! string.IsNullOrEmpty(voiceName))
+                        if (!string.IsNullOrEmpty(voiceName))
                         {
                             synth.SelectVoice(voiceName);
                         }
@@ -169,6 +173,7 @@ namespace ProxyMonitor
             _configService.CurrentConfig.Volume = (int)SldVolume.Value;
             _configService.CurrentConfig.Rate = (int)SldRate.Value;
             _configService.CurrentConfig.VoiceName = CmbVoices.SelectedValue as string;
+            _configService.CurrentConfig.UseAudioFile = ChkUseAudioFile.IsChecked == true;
             _configService.CurrentConfig.RunOnStartup = ChkStartup.IsChecked == true;
             _configService.Save();
 
@@ -177,7 +182,7 @@ namespace ProxyMonitor
 
             // Hide Window
             this.Hide();
-            
+
             // Ensure Monitor is running
             _monitorService.Start();
         }
@@ -211,6 +216,63 @@ namespace ProxyMonitor
             {
                 MessageBox.Show($"设置开机启动失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void ChkUseAudioFile_Checked(object sender, RoutedEventArgs e)
+        {
+            UpdateControlVisibility(true);
+            AdjustWindowSize();
+        }
+
+        private void ChkUseAudioFile_Unchecked(object sender, RoutedEventArgs e)
+        {
+            UpdateControlVisibility(false);
+            AdjustWindowSize();
+        }
+
+        private void UpdateControlVisibility(bool useAudioFile)
+        {
+            if (useAudioFile)
+            {
+                // Hide text content inputs
+                LblContent.Visibility = Visibility.Collapsed;
+                TxtContent.Visibility = Visibility.Collapsed;
+                LblContentDisabled.Visibility = Visibility.Collapsed;
+                TxtContentDisabled.Visibility = Visibility.Collapsed;
+
+                // Show audio file selectors
+                LblAudioEnabled.Visibility = Visibility.Visible;
+                GridAudioEnabled.Visibility = Visibility.Visible;
+                LblAudioDisabled.Visibility = Visibility.Visible;
+                GridAudioDisabled.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                // Show text content inputs
+                LblContent.Visibility = Visibility.Visible;
+                TxtContent.Visibility = Visibility.Visible;
+                LblContentDisabled.Visibility = Visibility.Visible;
+                TxtContentDisabled.Visibility = Visibility.Visible;
+
+                // Hide audio file selectors
+                LblAudioEnabled.Visibility = Visibility.Collapsed;
+                GridAudioEnabled.Visibility = Visibility.Collapsed;
+                LblAudioDisabled.Visibility = Visibility.Collapsed;
+                GridAudioDisabled.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void AdjustWindowSize()
+        {
+            // Temporarily set SizeToContent to adjust height
+            SizeToContent = SizeToContent.Height;
+            UpdateLayout();
+
+            // Reset to Manual to allow user resizing
+            Task.Delay(50).ContinueWith(_ =>
+            {
+                Dispatcher.Invoke(() => SizeToContent = SizeToContent.Manual);
+            });
         }
     }
 }

@@ -98,10 +98,10 @@ namespace ProxyMonitor.Services
         {
             try
             {
-                // Check for audio file first
+                // Check if user wants to use audio file AND file exists
                 string? audioFilePath = isEnabled ? _configService.CurrentConfig.AudioFileEnabled : _configService.CurrentConfig.AudioFileDisabled;
 
-                if (!string.IsNullOrEmpty(audioFilePath) && System.IO.File.Exists(audioFilePath))
+                if (_configService.CurrentConfig.UseAudioFile && !string.IsNullOrEmpty(audioFilePath) && System.IO.File.Exists(audioFilePath))
                 {
                     // Play audio file
                     using (System.Media.SoundPlayer player = new System.Media.SoundPlayer(audioFilePath))
