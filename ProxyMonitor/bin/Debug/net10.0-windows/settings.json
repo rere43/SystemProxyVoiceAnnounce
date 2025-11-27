@@ -9,5 +9,21 @@
   "AudioEnabledVolume": 80,
   "AudioDisabledVolume": 60,
   "UseAudioFile": true,
-  "RunOnStartup": true
+  "RunOnStartup": true,
+  "EnableTunMonitoring": true,
+  "TunEnabledText": "T.U.N\u5F00\u542F",
+  "TunDisabledText": "T.U.N\u5173\u95ED",
+  "TunKeywords": [
+    "Wintun",
+    "WinTUN",
+    "TAP",
+    "Clash",
+    "WireGuard",
+    "tun",
+    "utun"
+  ],
+  "AudioFileTunEnabled": "K:\\MyProject\\Chrome\u63D2\u4EF6 \u68C0\u6D4B\u4EE3\u7406 \u64AD\u653E\u8BED\u97F3\\ProxyMonitor\\\u5F00\u542F.wav",
+  "AudioFileTunDisabled": "K:\\MyProject\\Chrome\u63D2\u4EF6 \u68C0\u6D4B\u4EE3\u7406 \u64AD\u653E\u8BED\u97F3\\ProxyMonitor\\\u5173\u95ED.wav",
+  "AudioTunEnabledVolume": 90,
+  "AudioTunDisabledVolume": 80
 }

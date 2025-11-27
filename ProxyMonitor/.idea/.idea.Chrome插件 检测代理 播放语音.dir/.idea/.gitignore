@@ -1,0 +1,10 @@
+# 默认忽略的文件
+/shelf/
+/workspace.xml
+# Rider 忽略的文件
+/.idea.Chrome插件 检测代理 播放语音.iml
+/modules.xml
+/contentModel.xml
+/projectSettingsUpdater.xml
+# 基于编辑器的 HTTP 客户端请求
+/httpRequests/

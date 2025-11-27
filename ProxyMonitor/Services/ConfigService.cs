@@ -17,6 +17,18 @@ namespace ProxyMonitor.Services
         public int AudioDisabledVolume { get; set; } = 100;
         public bool UseAudioFile { get; set; } = false;
         public bool RunOnStartup { get; set; } = false;
+
+        // TUN模式检测配置
+        public bool EnableTunMonitoring { get; set; } = false;
+        public string TunEnabledText { get; set; } = "TUN模式开启";
+        public string TunDisabledText { get; set; } = "TUN模式关闭";
+        public string[] TunKeywords { get; set; } = new[] { "Wintun", "WinTUN", "TAP", "Clash", "WireGuard", "tun", "utun" };
+
+        // TUN音频文件配置
+        public string? AudioFileTunEnabled { get; set; }
+        public string? AudioFileTunDisabled { get; set; }
+        public int AudioTunEnabledVolume { get; set; } = 100;
+        public int AudioTunDisabledVolume { get; set; } = 100;
     }
 
     public class ConfigService

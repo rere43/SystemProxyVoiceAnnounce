@@ -30,3 +30,4 @@ K:\MyProject\Chrome插件 检测代理 播放语音\ProxyMonitor\bin\Debug\net10
 K:\MyProject\Chrome插件 检测代理 播放语音\ProxyMonitor\bin\Debug\net10.0-windows\NAudio.Wasapi.dll
 K:\MyProject\Chrome插件 检测代理 播放语音\ProxyMonitor\bin\Debug\net10.0-windows\NAudio.WinForms.dll
 K:\MyProject\Chrome插件 检测代理 播放语音\ProxyMonitor\bin\Debug\net10.0-windows\NAudio.WinMM.dll
+K:\MyProject\Chrome插件 检测代理 播放语音\ProxyMonitor\obj\Debug\net10.0-windows\ProxyMonitor.sourcelink.json

@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using System.Net.NetworkInformation;
+using System.Linq;
 
 namespace ProxyMonitor.Services
 {
@@ -13,6 +15,7 @@ namespace ProxyMonitor.Services
         private readonly ConfigService _configService;
         private bool _isRunning;
         private int _lastProxyState = -1; // -1: unknown, 0: off, 1: on
+        private bool _lastTunState = false; // false: TUN off, true: TUN on
 
         public MonitorService(ConfigService configService)
         {
@@ -45,9 +48,19 @@ namespace ProxyMonitor.Services
                         // If proxy is already ON at startup, play notification
                         if (_lastProxyState == 1)
                         {
-                            PlayNotification(true);
+                            PlayNotification(true, "proxy");
                         }
                     }
+                }
+            }
+
+            // Initialize TUN state
+            if (_configService.CurrentConfig.EnableTunMonitoring)
+            {
+                _lastTunState = IsTunActive();
+                if (_lastTunState)
+                {
+                    PlayNotification(true, "tun");
                 }
             }
         }
@@ -59,6 +72,11 @@ namespace ProxyMonitor.Services
                 try
                 {
                     CheckProxy();
+
+                    if (_configService.CurrentConfig.EnableTunMonitoring)
+                    {
+                        CheckTun();
+                    }
                 }
                 catch
                 {
@@ -82,12 +100,12 @@ namespace ProxyMonitor.Services
                             // Transition 0 -> 1 (Enabled)
                             if (_lastProxyState == 0 && intVal == 1)
                             {
-                                PlayNotification(true);
+                                PlayNotification(true, "proxy");
                             }
                             // Transition 1 -> 0 (Disabled)
                             else if (_lastProxyState == 1 && intVal == 0)
                             {
-                                PlayNotification(false);
+                                PlayNotification(false, "proxy");
                             }
                         }
                         _lastProxyState = intVal;
@@ -96,19 +114,89 @@ namespace ProxyMonitor.Services
             }
         }
 
-        private void PlayNotification(bool isEnabled)
+        private void CheckTun()
+        {
+            bool currentTunState = IsTunActive();
+
+            // State changed: TUN off -> on
+            if (!_lastTunState && currentTunState)
+            {
+                PlayNotification(true, "tun");
+            }
+            // State changed: TUN on -> off
+            else if (_lastTunState && !currentTunState)
+            {
+                PlayNotification(false, "tun");
+            }
+
+            _lastTunState = currentTunState;
+        }
+
+        private bool IsTunActive()
         {
             try
             {
+                var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+                var keywords = _configService.CurrentConfig.TunKeywords;
+
+                foreach (var iface in interfaces)
+                {
+                    // 检查接口描述或名称是否包含TUN关键词
+                    bool isTunInterface = keywords.Any(keyword =>
+                        iface.Description.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        iface.Name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0);
+
+                    // 如果是TUN接口且状态为Up,返回true
+                    if (isTunInterface && iface.OperationalStatus == OperationalStatus.Up)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void PlayNotification(bool isEnabled, string notificationType = "proxy")
+        {
+            try
+            {
+                // 根据通知类型选择文本
+                string textToSpeak;
+                if (notificationType == "tun")
+                {
+                    textToSpeak = isEnabled ? _configService.CurrentConfig.TunEnabledText : _configService.CurrentConfig.TunDisabledText;
+                }
+                else // proxy
+                {
+                    textToSpeak = isEnabled ? _configService.CurrentConfig.TtsText : _configService.CurrentConfig.TtsTextDisabled;
+                }
+
                 // Check if user wants to use audio file AND file exists
-                string? audioFilePath = isEnabled ? _configService.CurrentConfig.AudioFileEnabled : _configService.CurrentConfig.AudioFileDisabled;
+                string? audioFilePath = null;
+                float audioVolume = 1.0f;
+
+                if (_configService.CurrentConfig.UseAudioFile)
+                {
+                    if (notificationType == "tun")
+                    {
+                        audioFilePath = isEnabled ? _configService.CurrentConfig.AudioFileTunEnabled : _configService.CurrentConfig.AudioFileTunDisabled;
+                        audioVolume = (isEnabled ? _configService.CurrentConfig.AudioTunEnabledVolume : _configService.CurrentConfig.AudioTunDisabledVolume) / 100.0f;
+                    }
+                    else // proxy
+                    {
+                        audioFilePath = isEnabled ? _configService.CurrentConfig.AudioFileEnabled : _configService.CurrentConfig.AudioFileDisabled;
+                        audioVolume = (isEnabled ? _configService.CurrentConfig.AudioEnabledVolume : _configService.CurrentConfig.AudioDisabledVolume) / 100.0f;
+                    }
+                }
 
                 if (_configService.CurrentConfig.UseAudioFile && !string.IsNullOrEmpty(audioFilePath) && System.IO.File.Exists(audioFilePath))
                 {
                     // Play audio file with volume control
-                    float audioVolume = isEnabled ? _configService.CurrentConfig.AudioEnabledVolume : _configService.CurrentConfig.AudioDisabledVolume;
-                    audioVolume = audioVolume / 100.0f;
-
                     using (var audioFile = new AudioFileReader(audioFilePath))
                     {
                         var volumeSampleProvider = new VolumeSampleProvider(audioFile) { Volume = audioVolume };
@@ -145,7 +233,6 @@ namespace ProxyMonitor.Services
                             }
                         }
 
-                        string textToSpeak = isEnabled ? _configService.CurrentConfig.TtsText : _configService.CurrentConfig.TtsTextDisabled;
                         if (!string.IsNullOrEmpty(textToSpeak))
                         {
                             synth.Speak(textToSpeak);

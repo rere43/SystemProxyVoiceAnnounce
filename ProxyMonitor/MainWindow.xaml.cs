@@ -70,8 +70,18 @@ namespace ProxyMonitor
             ChkStartup.IsChecked = _configService.CurrentConfig.RunOnStartup;
             ChkUseAudioFile.IsChecked = _configService.CurrentConfig.UseAudioFile;
 
-            // Set initial visibility based on UseAudioFile
+            // Load TUN settings
+            ChkEnableTunMonitoring.IsChecked = _configService.CurrentConfig.EnableTunMonitoring;
+            TxtTunEnabled.Text = _configService.CurrentConfig.TunEnabledText;
+            TxtTunDisabled.Text = _configService.CurrentConfig.TunDisabledText;
+            TxtAudioTunEnabled.Text = _configService.CurrentConfig.AudioFileTunEnabled ?? string.Empty;
+            TxtAudioTunDisabled.Text = _configService.CurrentConfig.AudioFileTunDisabled ?? string.Empty;
+            SldAudioTunEnabledVolume.Value = _configService.CurrentConfig.AudioTunEnabledVolume;
+            SldAudioTunDisabledVolume.Value = _configService.CurrentConfig.AudioTunDisabledVolume;
+
+            // Set initial visibility based on UseAudioFile  
             UpdateControlVisibility(_configService.CurrentConfig.UseAudioFile);
+            UpdateTunControlVisibility(_configService.CurrentConfig.EnableTunMonitoring);
 
             // Load Voices with Language Info
             using (SpeechSynthesizer synth = new SpeechSynthesizer())
@@ -257,10 +267,21 @@ namespace ProxyMonitor
             _configService.CurrentConfig.VoiceName = CmbVoices.SelectedValue as string;
             _configService.CurrentConfig.UseAudioFile = ChkUseAudioFile.IsChecked == true;
             _configService.CurrentConfig.RunOnStartup = ChkStartup.IsChecked == true;
+
+            // Save TUN settings
+            _configService.CurrentConfig.EnableTunMonitoring = ChkEnableTunMonitoring.IsChecked == true;
+            _configService.CurrentConfig.TunEnabledText = TxtTunEnabled.Text;
+            _configService.CurrentConfig.TunDisabledText = TxtTunDisabled.Text;
+            _configService.CurrentConfig.AudioFileTunEnabled = string.IsNullOrWhiteSpace(TxtAudioTunEnabled.Text) ? null : TxtAudioTunEnabled.Text;
+            _configService.CurrentConfig.AudioFileTunDisabled = string.IsNullOrWhiteSpace(TxtAudioTunDisabled.Text) ? null : TxtAudioTunDisabled.Text;
+            _configService.CurrentConfig.AudioTunEnabledVolume = (int)SldAudioTunEnabledVolume.Value;
+            _configService.CurrentConfig.AudioTunDisabledVolume = (int)SldAudioTunDisabledVolume.Value;
+
+            // Save to file
             _configService.Save();
 
-            // Handle Startup Registry
-            SetStartup(_configService.CurrentConfig.RunOnStartup);
+            // Set Startup
+            SetStartup(ChkStartup.IsChecked == true);
 
             // Hide Window
             this.Hide();
@@ -316,40 +337,16 @@ namespace ProxyMonitor
         {
             if (useAudioFile)
             {
-                // Hide text content inputs
-                LblContent.Visibility = Visibility.Collapsed;
-                TxtContent.Visibility = Visibility.Collapsed;
-                LblContentDisabled.Visibility = Visibility.Collapsed;
-                TxtContentDisabled.Visibility = Visibility.Collapsed;
-
-                // Show audio file selectors and controls
-                LblAudioEnabled.Visibility = Visibility.Visible;
-                GridAudioEnabled.Visibility = Visibility.Visible;
-                GridAudioEnabledControls.Visibility = Visibility.Visible;
-                LblAudioDisabled.Visibility = Visibility.Visible;
-                GridAudioDisabled.Visibility = Visibility.Visible;
-                GridAudioDisabledControls.Visibility = Visibility.Visible;
-
-                // Hide TTS settings
+                // Hide TTS panels, show Audio panels
+                PanelTtsContent.Visibility = Visibility.Collapsed;
+                PanelAudioContent.Visibility = Visibility.Visible;
                 BorderVoiceSettings.Visibility = Visibility.Collapsed;
             }
             else
             {
-                // Show text content inputs
-                LblContent.Visibility = Visibility.Visible;
-                TxtContent.Visibility = Visibility.Visible;
-                LblContentDisabled.Visibility = Visibility.Visible;
-                TxtContentDisabled.Visibility = Visibility.Visible;
-
-                // Hide audio file selectors and controls
-                LblAudioEnabled.Visibility = Visibility.Collapsed;
-                GridAudioEnabled.Visibility = Visibility.Collapsed;
-                GridAudioEnabledControls.Visibility = Visibility.Collapsed;
-                LblAudioDisabled.Visibility = Visibility.Collapsed;
-                GridAudioDisabled.Visibility = Visibility.Collapsed;
-                GridAudioDisabledControls.Visibility = Visibility.Collapsed;
-
-                // Show TTS settings
+                // Show TTS panels, hide Audio panels
+                PanelTtsContent.Visibility = Visibility.Visible;
+                PanelAudioContent.Visibility = Visibility.Collapsed;
                 BorderVoiceSettings.Visibility = Visibility.Visible;
             }
         }
@@ -364,6 +361,195 @@ namespace ProxyMonitor
             Task.Delay(50).ContinueWith(_ =>
             {
                 Dispatcher.Invoke(() => SizeToContent = SizeToContent.Manual);
+            });
+        }
+
+        private void ChkEnableTunMonitoring_Checked(object sender, RoutedEventArgs e)
+        {
+            UpdateTunControlVisibility(true);
+            AdjustWindowSize();
+        }
+
+        private void ChkEnableTunMonitoring_Unchecked(object sender, RoutedEventArgs e)
+        {
+            UpdateTunControlVisibility(false);
+            AdjustWindowSize();
+        }
+
+        private void UpdateTunControlVisibility(bool enableTunMonitoring)
+        {
+            // Update visibility of TUN sub-panels in both TTS and Audio modes
+            PanelTunTtsContent.Visibility = enableTunMonitoring ? Visibility.Visible : Visibility.Collapsed;
+            PanelTunAudioContent.Visibility = enableTunMonitoring ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void BtnTestTunEnabled_Click(object sender, RoutedEventArgs e)
+        {
+            string text = TxtTunEnabled.Text;
+            if (string.IsNullOrWhiteSpace(text)) text = "TUN模式开启";
+
+            int volume = (int)SldVolume.Value;
+            int rate = (int)SldRate.Value;
+            string? voiceName = CmbVoices.SelectedValue as string;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    using (SpeechSynthesizer synth = new SpeechSynthesizer())
+                    {
+                        synth.Volume = volume;
+                        synth.Rate = rate;
+
+                        if (!string.IsNullOrEmpty(voiceName))
+                        {
+                            synth.SelectVoice(voiceName);
+                        }
+
+                        synth.Speak(text);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() => MessageBox.Show($"试听失败: {ex.Message}"));
+                }
+            });
+        }
+
+        private void BtnTestTunDisabled_Click(object sender, RoutedEventArgs e)
+        {
+            string text = TxtTunDisabled.Text;
+            if (string.IsNullOrWhiteSpace(text)) text = "TUN模式关闭";
+
+            int volume = (int)SldVolume.Value;
+            int rate = (int)SldRate.Value;
+            string? voiceName = CmbVoices.SelectedValue as string;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    using (SpeechSynthesizer synth = new SpeechSynthesizer())
+                    {
+                        synth.Volume = volume;
+                        synth.Rate = rate;
+
+                        if (!string.IsNullOrEmpty(voiceName))
+                        {
+                            synth.SelectVoice(voiceName);
+                        }
+
+                        synth.Speak(text);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() => MessageBox.Show($"试听失败: {ex.Message}"));
+                }
+            });
+        }
+
+        private void BtnSelectAudioTunEnabled_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog dialog = new OpenFileDialog
+            {
+                Filter = "WAV音频文件 (*.wav)|*.wav",
+                Title = "选择TUN开启音频文件"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                TxtAudioTunEnabled.Text = dialog.FileName;
+            }
+        }
+
+        private void BtnSelectAudioTunDisabled_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog dialog = new OpenFileDialog
+            {
+                Filter = "WAV音频文件 (*.wav)|*.wav",
+                Title = "选择TUN关闭音频文件"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                TxtAudioTunDisabled.Text = dialog.FileName;
+            }
+        }
+
+        private void BtnTestAudioTunEnabled_Click(object sender, RoutedEventArgs e)
+        {
+            string audioFilePath = TxtAudioTunEnabled.Text;
+            if (string.IsNullOrWhiteSpace(audioFilePath) || !System.IO.File.Exists(audioFilePath))
+            {
+                MessageBox.Show("请选择有效的音频文件", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            float volume = (float)SldAudioTunEnabledVolume.Value / 100.0f;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    using (var audioFile = new AudioFileReader(audioFilePath))
+                    {
+                        var volumeSampleProvider = new VolumeSampleProvider(audioFile) { Volume = volume };
+                        using (var outputDevice = new WaveOutEvent())
+                        {
+                            outputDevice.Init(volumeSampleProvider);
+                            outputDevice.Play();
+
+                            // 等待播放完成
+                            while (outputDevice.PlaybackState == PlaybackState.Playing)
+                            {
+                                System.Threading.Thread.Sleep(100);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() => MessageBox.Show($"试听失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error));
+                }
+            });
+        }
+
+        private void BtnTestAudioTunDisabled_Click(object sender, RoutedEventArgs e)
+        {
+            string audioFilePath = TxtAudioTunDisabled.Text;
+            if (string.IsNullOrWhiteSpace(audioFilePath) || !System.IO.File.Exists(audioFilePath))
+            {
+                MessageBox.Show("请选择有效的音频文件", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            float volume = (float)SldAudioTunDisabledVolume.Value / 100.0f;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    using (var audioFile = new AudioFileReader(audioFilePath))
+                    {
+                        var volumeSampleProvider = new VolumeSampleProvider(audioFile) { Volume = volume };
+                        using (var outputDevice = new WaveOutEvent())
+                        {
+                            outputDevice.Init(volumeSampleProvider);
+                            outputDevice.Play();
+
+                            // 等待播放完成
+                            while (outputDevice.PlaybackState == PlaybackState.Playing)
+                            {
+                                System.Threading.Thread.Sleep(100);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() => MessageBox.Show($"试听失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error));
+                }
             });
         }
     }
