@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ProxyMonitor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+da3824d1486f86e4528bf3584c0d3adaf4a6cec2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7db37c74245a06223a1e80f7e004316410e2d24c")]
 [assembly: System.Reflection.AssemblyProductAttribute("ProxyMonitor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ProxyMonitor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
